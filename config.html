@@ -2,214 +2,452 @@
     $yesno = array('0'=>get_string('no'), '1'=>get_string('yes'));
 ?>
 
-<table cellspacing="0" cellpadding="5" border="0" class="boxaligncenter">
+<table cellspacing="0" cellpadding="5" border="0" class="boxaligncenter" id="adminsettings">
 <tr>
 <th colspan="2" scope="col">
-    <?php print_string("server_settings", "enrol_database") ?>
+    <?php print_string('server_settings', 'enrol_idatabase') ?>
 </th>
+<th></th>
 </tr>
 <tr>
-    <td align="right">enrol_dbtype:</td>
+    <td align="right">
+        <?php print_string('enrol_idb_type', 'enrol_idatabase') ?>:
+    </td>
     <td>
-    <?php  
+    <?php
        $dbtypes = array("access","ado_access", "ado", "ado_mssql", "borland_ibase", "csv", "db2", "fbsql", "firebird", "ibase", "informix72", "informix", "mssql", "mssql_n", "mysql", "mysqlt", "oci805", "oci8", "oci8po", "odbc", "odbc_mssql", "odbc_oracle", "oracle", "postgres64", "postgres7", "postgres", "proxy", "sqlanywhere", "sybase", "vfp");
        foreach ($dbtypes as $dbtype) {
            $dboptions[$dbtype] = $dbtype;
        }
-       if (!isset($frm->enrol_dbtype)) {
-           $frm->enrol_dbtype = 'mysql';
+       if (!isset($frm->enrol_idb_type)) {
+           $frm->enrol_idb_type = 'mysql';
        }
-       choose_from_menu($dboptions, "enrol_dbtype", $frm->enrol_dbtype, '', '', '');
+       choose_from_menu($dboptions, "enrol_idb_type", $frm->enrol_idb_type, '', '', '');
     ?>
-      
+
     </td>
     <td>
-    <?php  print_string("dbtype","enrol_database") ?>
+        <?php  print_string('enrol_idb_type_desc','enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_dbhost:</td>
+    <td align="right">
+        <?php print_string('enrol_idb_host', 'enrol_idatabase') ?>:
+    </td>
     <td>
-    <?php 
-        if (!isset($frm->enrol_dbhost)) {
-            $frm->enrol_dbhost = '';
-        } 
+    <?php
+        if (!isset($frm->enrol_idb_host)) {
+            $frm->enrol_idb_host = '';
+        }
     ?>
-        <input size="15" type="text" name="enrol_dbhost" value="<?php p($frm->enrol_dbhost) ?>" />
+        <input size="25" type="text" name="enrol_idb_host" value="<?php p($frm->enrol_idb_host) ?>" />
     </td>
     <td>
-    <?php  print_string("dbhost","enrol_database") ?>
+        <?php  print_string('enrol_idb_host_desc', 'enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_dbuser:</td>
-    <td>
-        <input size="15" type="text" name="enrol_dbuser" value="<?php echo $frm->enrol_dbuser ?>" />
+    <td align="right">
+        <?php print_string('enrol_idb_name', 'enrol_idatabase') ?>:
     </td>
     <td>
-    <?php  print_string("dbuser","enrol_database") ?>
-    </td>
-</tr>
-
-<tr>
-    <td align="right">enrol_dbpass:</td>
-    <td>
-        <input size="15" type="password" name="enrol_dbpass" value="<?php echo $frm->enrol_dbpass ?>" />
+        <input size="25" type="text" name="enrol_idb_name" value="<?php echo $frm->enrol_idb_name ?>" />
     </td>
     <td>
-    <?php  print_string("dbpass","enrol_database") ?>
+        <?php print_string('enrol_idb_name_desc', 'enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_dbname:</td>
-    <td>
-        <input size="15" type="text" name="enrol_dbname" value="<?php echo $frm->enrol_dbname ?>" />
+    <td align="right">
+        <?php print_string('enrol_idb_user', 'enrol_idatabase') ?>:
     </td>
     <td>
-    <?php  print_string("dbname","enrol_database") ?>
+        <input size="25" type="text" name="enrol_idb_user" value="<?php echo $frm->enrol_idb_user ?>" />
+    </td>
+    <td>
+        <?php print_string('enrol_idb_user_desc', 'enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_dbtable:</td>
-    <td>
-        <input size="15" type="text" name="enrol_dbtable" value="<?php echo $frm->enrol_dbtable ?>" />
+    <td align="right">
+        <?php print_string('enrol_idb_pass', 'enrol_idatabase') ?>:
     </td>
     <td>
-    <?php  print_string("dbtable","enrol_database") ?>
+        <input size="25" type="password" name="enrol_idb_pass" value="<?php echo $frm->enrol_idb_pass ?>" />
+    </td>
+    <td>
+        <?php print_string('enrol_idb_pass_desc', 'enrol_idatabase') ?>
     </td>
 </tr>
+
+<tr>
+    <td colspan="3" scope="col">
+        <hr>
+    </td>
+</tr>
+
 <tr>
     <th colspan="2" scope="col">
-        <?php print_string("remote_fields_mapping", "enrol_database") ?>
+        <?php print_string('course_field_mapping', 'enrol_idatabase') ?>
     </th>
+    <th></th>
 </tr>
+
 <tr>
-    <td align="right">enrol_localcoursefield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_localcoursefield" value="<?php echo $frm->enrol_localcoursefield ?>" />
-    </td>
-    <td>
-    <?php  print_string("localcoursefield","enrol_database") ?>
+    <td colspan="3" scope="col">
+    <table cellspacing="0" cellpadding="5" border="0">
+        <tr>
+            <th>
+                <!-- empty -->
+            </th>
+            <th>
+                <?php print_string('local', 'enrol_idatabase', $CFG->prefix) ?>
+            </th>
+            <th>
+                <?php print_string('remote', 'enrol_idatabase') ?>
+            </th>
+            <th>
+                <!-- empty -->
+            </th>
+        </tr>
+
+        <tr>
+            <td align="right">
+                <?php print_string('enrol_idb_coursetable', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <span class="form-defaultinfo"><?php echo $CFG->prefix."course"; ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_coursetable" value="<?php echo $frm->enrol_idb_coursetable ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_idb_coursetable_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_coursefield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_localcoursefield" value="<?php echo $frm->enrol_idb_localcoursefield ?>" /><br>
+                <span class="form-defaultinfo"><?php print_string('enrol_coursefield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remotecoursefield" value="<?php echo $frm->enrol_idb_remotecoursefield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_coursefield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_coursecategoryfield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <span class="form-defaultinfo"><?php echo $CFG->prefix."course_categories.name"; ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remotecoursecategoryfield" value="<?php echo $frm->enrol_idb_remotecoursecategoryfield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_coursecategoryfield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_coursesubcategoryfield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <span class="form-defaultinfo"><?php echo $CFG->prefix."course_categories.name"; ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remotecoursesubcategoryfield" value="<?php echo $frm->enrol_idb_remotecoursesubcategoryfield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_coursesubcategoryfield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_coursemissingcategory', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_localcoursemissingcategory" value="<?php echo $frm->enrol_idb_localcoursemissingcategory ?>" /><br>
+                <span class="form-defaultinfo"><?php echo $CFG->prefix."course_categories.name"; ?></span>
+            </td>
+            <td colspan="2" scope="col">
+                <?php print_string('enrol_coursemissingcategory_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_coursefullnamefield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <span class="form-defaultinfo"><?php print_string('enrol_coursefullnamefield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remotecoursefullnamefield" value="<?php echo $frm->enrol_idb_remotecoursefullnamefield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_coursefullnamefield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_courseshortnamefield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <span class="form-defaultinfo"><?php print_string('enrol_courseshortnamefield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remotecourseshortnamefield" value="<?php echo $frm->enrol_idb_remotecourseshortnamefield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_courseshortnamefield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+
+
+    </table>
+
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_localuserfield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_localuserfield" value="<?php echo $frm->enrol_localuserfield ?>" />
-    </td>
-    <td>
-    <?php  print_string("localuserfield","enrol_database") ?>
+    <td colspan="3" scope="col">
+        <hr>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_db_localrolefield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_db_localrolefield" value="<?php echo $frm->enrol_db_localrolefield ?>" />
-    </td>
-    <td>
-    <?php  print_string("localrolefield","enrol_database") ?>
+    <th colspan="2" scope="col">
+        <?php print_string('enrol_field_mapping', 'enrol_idatabase') ?>
+    </th>
+    <th></th>
+</tr>
+
+<tr>
+    <td colspan="3" scope="col">
+    <table cellspacing="0" cellpadding="5" border="0">
+
+        <tr>
+            <th>
+                <!-- empty -->
+            </th>
+            <th>
+                <?php print_string('local', 'enrol_idatabase', $CFG->prefix) ?>
+            </th>
+            <th>
+                <?php print_string('remote', 'enrol_idatabase') ?>
+            </th>
+            <th>
+                <!-- empty -->
+            </th>
+        </tr>
+
+        <tr>
+            <td align="right">
+                <?php print_string('enrol_idb_enroltable', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_enroltable" value="<?php echo $frm->enrol_idb_enroltable ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_idb_enroltable_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_userfield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_localuserfield" value="<?php echo $frm->enrol_idb_localuserfield ?>" /><br>
+                <span class="form-defaultinfo"><?php print_string('enrol_userfield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remoteuserfield" value="<?php echo $frm->enrol_idb_remoteuserfield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_userfield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_rolefield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_localrolefield" value="<?php echo $frm->enrol_idb_localrolefield ?>" /><br>
+                <span class="form-defaultinfo"><?php print_string('enrol_rolefield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remoterolefield" value="<?php echo $frm->enrol_idb_remoterolefield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_rolefield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_enrolcoursefield', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_localenrolcoursefield" value="<?php echo $frm->enrol_idb_localenrolcoursefield ?>" /><br>
+                <span class="form-defaultinfo"><?php print_string('enrol_enrolcoursefield_ex', 'enrol_idatabase', $CFG->prefix) ?></span>
+            </td>
+            <td>
+                <input size="25" type="text" name="enrol_idb_remoteenrolcoursefield" value="<?php echo $frm->enrol_idb_remoteenrolcoursefield ?>" />
+            </td>
+            <td>
+                <?php print_string('enrol_coursefield_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_dbdefaultcourseroleid', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <?php
+                    $sitecontext = get_context_instance(CONTEXT_SYSTEM);
+                    $assignableroles = get_assignable_roles($sitecontext);
+                    $assignableroles = array('' => get_string('default')) + $assignableroles;
+
+                    choose_from_menu($assignableroles, 'enrol_idb_defaultcourseroleid', $frm->enrol_idb_defaultcourseroleid, '');
+                    if (isset($err['enrol_idb_defaultcourseroleid'])) formerr($err['enrol_idb_defaultcourseroleid']);
+                ?>
+            </td>
+            <td colspan="2" scope="col">
+                <?php print_string('enrol_dbdefaultcourseroleid_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+        <tr valign="top">
+            <td align="right">
+                <?php print_string('enrol_dballowedroles', 'enrol_idatabase') ?>:
+            </td>
+            <td>
+                <?php
+                    $sitecontext = get_context_instance(CONTEXT_SYSTEM);
+                    $assignableroles = get_assignable_roles($sitecontext);
+                    $assignableroles = array('all'=> get_string(all)) + $assignableroles;
+
+                    if (empty($frm->enrol_idb_allowedroles)) {
+                        $selectedroles=array('all');
+                    } else {
+                        $selectedroles = explode(',',$frm->enrol_idb_allowedroles);
+                    }
+
+                    choose_from_menu ($assignableroles, 'enrol_idb_allowedroles', $selectedroles, '', '',
+                           '0', false, false, 0, '', true, true, '');
+
+                    if (isset($err['enrol_idb_allowedroles'])) formerr($err['enrol_idb_allowedroles']);
+                ?>
+            </td>
+            <td colspan="2" scope="col">
+                <?php print_string('enrol_dballowedroles_desc', 'enrol_idatabase') ?>
+            </td>
+        </tr>
+
+    </table>
+
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_remotecoursefield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_remotecoursefield" value="<?php echo $frm->enrol_remotecoursefield ?>" />
-    </td>
-    <td>
-    <?php  print_string("remotecoursefield","enrol_database") ?>
-    </td>
-</tr>
-
-<tr>
-    <td align="right">enrol_remoteuserfield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_remoteuserfield" value="<?php echo $frm->enrol_remoteuserfield ?>" />
-    </td>
-    <td>
-    <?php  print_string("remoteuserfield","enrol_database") ?>
-    </td>
-</tr>
-
-<tr>
-    <td align="right">enrol_db_remoterolefield:</td>
-    <td>
-        <input size="15" type="text" name="enrol_db_remoterolefield" value="<?php echo $frm->enrol_db_remoterolefield ?>" />
-    </td>
-    <td>
-    <?php  print_string("remoterolefield","enrol_database") ?>
+    <td colspan="3" scope="col">
+        <hr>
     </td>
 </tr>
 
 <tr>
    <th colspan="2" scope="col">
-        <?php print_string('roles', 'role') ?>
+        <?php print_string('enrol_database_autocreation_settings', 'enrol_idatabase') ?>
    </th>
+   <th></th>
 </tr>
+
 <tr>
-    <td align="right">enrol_db_defaultcourseroleid:</td>
+    <td align="right">
+        <?php  print_string('enrol_idb_courseautocreate','enrol_idatabase') ?>:
+    </td>
     <td>
     <?php
-        $sitecontext = get_context_instance(CONTEXT_SYSTEM);
-        $assignableroles = get_assignable_roles($sitecontext);
-        $assignableroles = array('' => get_string('default')) + $assignableroles;
-    
-        choose_from_menu($assignableroles, 'enrol_db_defaultcourseroleid', $frm->enrol_db_defaultcourseroleid, '');
-        if (isset($err['enrol_db_defaultcourseroleid'])) formerr($err['enrol_db_defaultcourseroleid']); 
+       choose_from_menu($yesno, "enrol_idb_courseautocreate", $frm->enrol_idb_courseautocreate, "");
+       if (isset($err["enrol_idb_courseautocreate"])) formerr($err["enrol_idb_courseautocreate"]);
     ?>
     </td>
     <td>
-    <?php  print_string("defaultcourseroleid","enrol_database") ?>
+        <?php  print_string('enrol_idb_courseautocreate_desc','enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-   <th colspan="2" scope="col">
-        <?php print_string("enrol_database_autocreation_settings", "enrol_database") ?>
-   </th>
-</tr>
-<tr>
-    <td align="right">enrol_db_autocreate:</td>
+    <td align="right">
+        <?php  print_string('enrol_idb_categoryautocreate','enrol_idatabase') ?>:
+    </td>
     <td>
     <?php
-       choose_from_menu($yesno, "enrol_db_autocreate", $frm->enrol_db_autocreate, "");
-           if (isset($err["enrol_db_autocreate"])) formerr($err["enrol_db_autocreate"]); 
+       choose_from_menu($yesno, "enrol_idb_categoryautocreate", $frm->enrol_idb_categoryautocreate, "");
+       if (isset($err["enrol_idb_categoryautocreate"])) formerr($err["enrol_idb_categoryautocreate"]);
     ?>
     </td>
     <td>
-    <?php  print_string("autocreate","enrol_database") ?>
+        <?php  print_string('enrol_idb_categoryautocreate_desc','enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-        <td align="right">enrol_db_category:</td>
-        <td>
-    <?php
-           $displaylist = array();
-           $parentlist = array();
-           make_categories_list($displaylist, $parentlist);
-           choose_from_menu($displaylist, "enrol_db_category", $frm->enrol_db_category, "");
-           
-    ?>
-    <?php  if (isset($err["enrol_db_category"])) formerr($err["enrol_db_category"]); ?>
-    </td><td>
-    <?php  print_string("category","enrol_database") ?>
+    <td align="right">
+        <?php  print_string('enrol_idb_category','enrol_idatabase') ?>:
+    </td>
+    <td>
+        <?php
+               $displaylist = array();
+               $parentlist = array();
+               make_categories_list($displaylist, $parentlist);
+               choose_from_menu($displaylist, "enrol_idb_category", $frm->enrol_idb_category, "");
+               if (isset($err["enrol_idb_category"])) formerr($err["enrol_idb_category"]);
+        ?>
+    </td>
+    <td>
+        <?php  print_string('enrol_idb_category_desc','enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_db_template:</td>
-        <td>
-    <input name="enrol_db_template" type="text" size="30" value="<?php echo $frm->enrol_db_template?>" />
-    <?php  if (isset($err["enrol_db_template"])) formerr($err["enrol_db_template"]); ?>
-    </td><td>
-    <?php  print_string("template","enrol_database") ?>
+    <td align="right">
+        <?php  print_string('enrol_idb_template','enrol_idatabase') ?>:
+    </td>
+    <td>
+        <input name="enrol_idb_template" type="text" size="30" value="<?php echo $frm->enrol_idb_template?>" />
+        <?php  if (isset($err["enrol_idb_template"])) formerr($err["enrol_idb_template"]); ?>
+    </td>
+    <td>
+        <?php  print_string('enrol_idb_template_desc','enrol_idatabase', $CFG->prefix) ?>
+    </td>
+</tr>
+
+<tr>
+    <td colspan="3" scope="col">
+        <hr>
     </td>
 </tr>
 
@@ -220,32 +458,54 @@
 </tr>
 
 <tr>
-    <td align="right">enrol_db_ignorehiddencourse:</td>
-    <td>
-    <?php
-        choose_from_menu($yesno, "enrol_db_ignorehiddencourse", $frm->enrol_db_ignorehiddencourse, "");
-        if (isset($err['enrol_db_ignorehiddencourse'])) {
-            formerr($err['enrol_db_ignorehiddencourse']);
-        }
-    ?>
+    <td align="right">
+        <?php  print_string('enrol_idb_ignorehiddencourse','enrol_idatabase', $CFG->prefix) ?>:
     </td>
     <td>
-        <?php print_string('ignorehiddencourse', 'enrol_database' ); ?>
+        <?php
+            choose_from_menu($yesno, "enrol_idb_ignorehiddencourse", $frm->enrol_idb_ignorehiddencourse, "");
+            if (isset($err['enrol_idb_ignorehiddencourse'])) {
+                formerr($err['enrol_idb_ignorehiddencourse']);
+            }
+        ?>
+    </td>
+    <td>
+        <?php  print_string('enrol_idb_ignorehiddencourse_desc','enrol_idatabase') ?>
     </td>
 </tr>
 
 <tr>
-    <td align="right">enrol_db_disableunenrol:</td>
-    <td>
-    <?php
-        choose_from_menu($yesno, "enrol_db_disableunenrol", $frm->enrol_db_disableunenrol, "");
-        if (isset($err['enrol_db_disableunenrol'])) {
-            formerr($err['enrol_db_disableunenrol']);
-        }
-    ?>
+    <td align="right">
+        <?php  print_string('enrol_idb_disableunenrol','enrol_idatabase') ?>:
     </td>
     <td>
-        <?php print_string('disableunenrol', 'enrol_database' ); ?>
+        <?php
+            choose_from_menu($yesno, "enrol_idb_disableunenrol", $frm->enrol_idb_disableunenrol, "");
+            if (isset($err['enrol_idb_disableunenrol'])) {
+                formerr($err['enrol_idb_disableunenrol']);
+            }
+        ?>
+    </td>
+    <td>
+        <?php  print_string('enrol_idb_disableunenrol_desc','enrol_idatabase') ?>
     </td>
 </tr>
+
+<tr>
+    <td align="right">
+        <?php  print_string('enrol_idb_disablelogincheck','enrol_idatabase') ?>:
+    </td>
+    <td>
+        <?php
+            choose_from_menu($yesno, "enrol_idb_disablelogincheck", $frm->enrol_idb_disablelogincheck, "");
+            if (isset($err['enrol_idb_disablelogincheck'])) {
+                formerr($err['enrol_idb_disablelogincheck']);
+            }
+        ?>
+    </td>
+    <td>
+        <?php  print_string('enrol_idb_disablelogincheck_desc','enrol_idatabase') ?>
+    </td>
+</tr>
+
 </table>

@@ -2,7 +2,7 @@
 
 require_once($CFG->dirroot.'/enrol/enrol.class.php');
 
-class enrolment_plugin_database {
+class enrolment_plugin_idatabase {
 
     var $log;
 
@@ -14,39 +14,57 @@ class enrolment_plugin_database {
 function setup_enrolments(&$user) {
     global $CFG;
 
+    // check whether setup enrolments is disabled
+    if ($CFG->enrol_idb_disablelogincheck) {
+        return;
+    }
+
     // NOTE: if $this->enrol_connect() succeeds you MUST remember to call
     // $this->enrol_disconnect() as it is doing some nasty vodoo with $CFG->prefix
     $enroldb = $this->enrol_connect();
     if (!$enroldb) {
-        error_log('[ENROL_DB] Could not make a connection');
+        error_log('[ENROL_IDB] Could not make a connection');
         return;
     }
 
-    // If we are expecting to get role information from our remote db, then
-    // we execute the below code for every role type.  Otherwise we just
-    // execute it once with null (hence the dummy array).
-    $roles = !empty($CFG->enrol_db_remoterolefield) && !empty($CFG->enrol_db_localrolefield)
-        ? get_records('role')
-        : array(null);
+    $roles = $this->get_available_roles();
 
-    //error_log('[ENROL_DB] found ' . count($roles) . ' roles:');
+    //error_log('[ENROL_IDB] found ' . count($roles) . ' roles:');
+
+    $courses = array(); //courses cache for this user
+    $fullnamefield = (empty($CFG->enrol_idb_remotecoursefullnamefield))?
+        $CFG->enrol_idb_remotecoursefield:
+        $CFG->enrol_idb_remotecoursefullnamefield;
+    $shortnamefield = (empty($CFG->enrol_idb_remotecourseshortnamefield))?
+        $fullnamefield:
+        $CFG->enrol_idb_remotecourseshortnamefield;
+
+    // This is the rest of the select string for querying courses.
+    $selectstring = ", $fullnamefield as enrolremotefullnamecoursefield,
+                     $shortnamefield as enrolremoteshortnamecoursefield";
+    if (!empty($CFG->enrol_idb_remotecoursecategoryfield)) {
+        $selectstring .= ", {$CFG->enrol_idb_remotecoursecategoryfield} as remotecoursecategoryfield";
+        if (!empty($CFG->enrol_idb_remotecoursesubcategoryfield)) {
+            $selectstring .= ", {$CFG->enrol_idb_remotecoursesubcategoryfield} as remotecoursesubcategoryfield";
+        }
+    }
 
     foreach($roles as $role) {
 
-        //error_log('[ENROL_DB] setting up enrolments for '.$role->shortname);
+        //error_log('[ENROL_IDB] setting up enrolments for '.$role->shortname);
 
         /// Get the authoritative list of enrolments from the external database table
         /// We're using the ADOdb functions natively here and not our datalib functions
         /// because we didn't want to mess with the $db global
 
-        $useridfield = $enroldb->quote($user->{$CFG->enrol_localuserfield});
+        $useridfield = $enroldb->quote($user->{$CFG->enrol_idb_localuserfield});
 
         list($have_role, $remote_role_name, $remote_role_value) = $this->role_fields($enroldb, $role);
 
         /// Check if a particular role has been forced by the plugin site-wide
         /// (if we aren't doing a role-based select)
-        if (!$have_role && $CFG->enrol_db_defaultcourseroleid) {
-            $role = get_record('role', 'id', $CFG->enrol_db_defaultcourseroleid);
+        if (!$have_role && $CFG->enrol_idb_defaultcourseroleid) {
+            $role = get_record('role', 'id', $CFG->enrol_idb_defaultcourseroleid);
         }
 
         /// Whether to fetch the default role on a per-course basis (below) or not.
@@ -54,16 +72,17 @@ function setup_enrolments(&$user) {
 
         /*
         if ($have_role) {
-            error_log('[ENROL_DB] Doing role-specific select from db for role: '.$role->shortname);
+            error_log('[ENROL_IDB] Doing role-specific select from db for role: '.$role->shortname);
         } elseif ($use_default_role) {
-            error_log('[ENROL_DB] Using course default for roles - assuming that database lists defaults');
+            error_log('[ENROL_IDB] Using course default for roles - assuming that database lists defaults');
         } else {
-            error_log('[ENROL_DB] Using config default for roles: '.$role->shortname);
+            error_log('[ENROL_IDB] Using config default for roles: '.$role->shortname);
         }*/
 
-        if ($rs = $enroldb->Execute("SELECT {$CFG->enrol_remotecoursefield} as enrolremotecoursefield
-                                       FROM {$CFG->enrol_dbtable}
-                                      WHERE {$CFG->enrol_remoteuserfield} = " . $useridfield .
+
+        if ($rs = $enroldb->Execute("SELECT {$CFG->enrol_idb_remoteenrolcoursefield} as enrolremotecoursefield
+                                       FROM {$CFG->enrol_idb_enroltable}
+                                      WHERE {$CFG->enrol_idb_remoteuserfield} = " . $useridfield .
                                         (isset($remote_role_name, $remote_role_value) ? ' AND '.$remote_role_name.' = '.$remote_role_value : ''))) {
 
             // We'll use this to see what to add and remove
@@ -78,7 +97,6 @@ function setup_enrolments(&$user) {
                 $existing = array();
             }
 
-
             if (!$rs->EOF) {   // We found some courses
 
                 //$count = 0;
@@ -90,12 +108,32 @@ function setup_enrolments(&$user) {
                 }
                 rs_close($rs);
 
-                //error_log('[ENROL_DB] Found '.count($existing).' existing roles and '.$count.' in external database');
+                $missingcourses = array();
+                foreach ($courselist as $coursefield) {
+                    if (empty($courses[$coursefield])) {
+                        $missingcourses[] = $coursefield;
+                    }
+                }
+
+                if ($rs = $enroldb->Execute("SELECT {$CFG->enrol_idb_remotecoursefield} as enrolremotecoursefield
+                          $selectstring
+                          FROM {$CFG->enrol_idb_coursetable}
+                          WHERE {$CFG->enrol_idb_remotecoursefield} IN ('" . implode("','", $missingcourses) . "')")) {
+
+                    //all courses for this user are loaded
+                    if (!$rs->EOF) {
+                        while ($c = rs_fetch_next_record($rs)) {
+                            $courses[$c->enrolremotecoursefield] = $c;
+                        }
+                    }
+                }
+
+                //error_log('[ENROL_IDB] Found '.count($existing).' existing roles and '.$count.' in external database');
 
                 foreach ($courselist as $coursefield) {   /// Check the list of courses against existing
-                    $course = get_record('course', $CFG->enrol_localcoursefield, addslashes($coursefield));
+                    $course = get_record('course', $CFG->enrol_idb_localcoursefield, addslashes($coursefield));
                     if (!is_object($course)) {
-                        if (empty($CFG->enrol_db_autocreate)) { // autocreation not allowed
+                        if (empty($CFG->enrol_idb_courseautocreate)) { // autocreation not allowed
                             if (debugging('',DEBUG_ALL)) {
                                 error_log( "Course $coursefield does not exist, skipping") ;
                             }
@@ -104,10 +142,10 @@ function setup_enrolments(&$user) {
                         // ok, now then let's create it!
                         // prepare any course properties we actually have
                         $course = new StdClass;
-                        $course->{$CFG->enrol_localcoursefield} = $coursefield;
-                        $course->fullname  = $coursefield;
-                        $course->shortname = $coursefield;
-                        if (!($newcourseid = $this->create_course($course, true)
+                        $course->{$CFG->enrol_idb_localcoursefield} = $coursefield;
+                        $course->fullname  = $courses[$coursefield]->enrolremotefullnamecoursefield;
+                        $course->shortname = $courses[$coursefield]->enrolremoteshortnamecoursefield;
+                        if (!($newcourseid = $this->create_course($course, $courses[$coursefield], true)
                             and $course = get_record( 'course', 'id', $newcourseid))) {
                             error_log( "Creating course $coursefield failed");
                             continue; // nothing left to do...
@@ -116,7 +154,7 @@ function setup_enrolments(&$user) {
 
                     // if the course is hidden and we don't want to enrol in hidden courses
                     // then just skip it
-                    if (!$course->visible and $CFG->enrol_db_ignorehiddencourse) {
+                    if (!$course->visible and $CFG->enrol_idb_ignorehiddencourse) {
                         continue;
                     }
 
@@ -139,36 +177,62 @@ function setup_enrolments(&$user) {
                         if ($role_assignment->roleid == $role->id
                             && $role_assignment->contextid == $context->id) {
                             unset($existing[$key]);
-                            //error_log('[ENROL_DB] User is already enroled in course '.$course->idnumber);
+                            //error_log('[ENROL_IDB] User is already enroled in course '.$course->idnumber);
                             continue 2;
                         }
                     }
 
-                    //error_log('[ENROL_DB] Enrolling user in course '.$course->idnumber);
-                    role_assign($role->id, $user->id, 0, $context->id, 0, 0, 0, 'database');
+                    //error_log('[ENROL_IDB] Enrolling user in course '.$course->idnumber);
+                    role_assign($role->id, $user->id, 0, $context->id, 0, 0, 0, 'idatabase');
                 }
             } // We've processed all external courses found
+            unset($courses); //free mem
 
             /// We have some courses left that we might need to unenrol from
-            /// Note: we only process enrolments that we (ie 'database' plugin) made
+            /// Note: we only process enrolments that we (ie 'idatabase' plugin) made
             /// Do not unenrol anybody if the disableunenrol option is 'yes'
-            if (!$CFG->enrol_db_disableunenrol) {
+            if (!$CFG->enrol_idb_disableunenrol) {
                 foreach ($existing as $role_assignment) {
-                    if ($role_assignment->enrol == 'database') {
-                        //error_log('[ENROL_DB] Removing user from context '.$role_assignment->contextid);
+                    if ($role_assignment->enrol == 'idatabase') {
+                        //error_log('[ENROL_IDB] Removing user from context '.$role_assignment->contextid);
                         role_unassign($role_assignment->roleid, $user->id, '', $role_assignment->contextid);
                     }
                 }
             }
         } else {
-            error_log('[ENROL_DB] Couldn\'t get rows from external db: '.$enroldb->ErrorMsg());
+            error_log('[ENROL_IDB] Couldn\'t get rows from external db: '.$enroldb->ErrorMsg());
         }
     }
     $this->enrol_disconnect($enroldb);
 }
 
 /**
- * sync enrolments with database, create courses if required.
+ * Gets all the allowed roles to enrol.
+ * @global object $CFG
+ * @return array array of roles that will be enrolled.
+ */
+function get_available_roles() {
+    global $CFG;
+
+    // If we are expecting to get role information from our remote db, then
+    // we execute the below code for every role type.  Otherwise we just
+    // execute it once with null (hence the dummy array).
+    if (empty($CFG->enrol_idb_allowedroles) || $CFG->enrol_idb_allowedroles == 'all') {
+        $availroles = get_records('role');
+    } else {
+        $shortnames = '\''.str_replace(',', '\',\'', $CFG->enrol_idb_allowedroles).'\'';
+        $availroles = get_records_select('role', 'shortname IN ('.$shortnames.')');
+    }
+
+    $roles = !empty($CFG->enrol_idb_remoterolefield) && !empty($CFG->enrol_idb_localrolefield)
+        ? $availroles
+        : array(null);
+
+    return $roles;
+}
+
+/**
+ * sync enrolments with idatabase, create courses if required.
  *
  * @param object The role to sync for. If no role is specified, defaults are
  * used.
@@ -181,7 +245,7 @@ function sync_enrolments($role = null) {
     // Connect to the external database
     $enroldb = $this->enrol_connect();
     if (!$enroldb) {
-        notify("enrol/database cannot connect to server");
+        notify("enrol/idatabase cannot connect to server");
         return false;
     }
 
@@ -197,18 +261,25 @@ function sync_enrolments($role = null) {
     list($have_role, $remote_role_name, $remote_role_value) = $this->role_fields($enroldb, $role);
 
     if (!$have_role) {
-        if (!empty($CFG->enrol_db_defaultcourseroleid)
-         and $role = get_record('role', 'id', $CFG->enrol_db_defaultcourseroleid)) {
-            echo "=== Using enrol_db_defaultcourseroleid: {$role->id} ({$role->shortname}) ===\n";
+        if (!empty($CFG->enrol_idb_defaultcourseroleid)
+         and $role = get_record('role', 'id', $CFG->enrol_idb_defaultcourseroleid)) {
+            echo "=== Using enrol_idb_defaultcourseroleid: {$role->id} ({$role->shortname}) ===\n";
         } elseif (isset($role)) {
             echo "!!! WARNING: Role specified by caller, but no (or invalid) role configuration !!!\n";
         }
     }
 
+    $coursefields = $this->get_course_fields();
+    $strcoursefields = " ct.".implode(", ct.", $coursefields);
+
     // get enrolments per-course
-    $sql =  "SELECT DISTINCT {$CFG->enrol_remotecoursefield} " .
-        " FROM {$CFG->enrol_dbtable} " .
-        " WHERE {$CFG->enrol_remoteuserfield} IS NOT NULL" .
+    $sql =  "SELECT DISTINCT et.{$CFG->enrol_idb_remoteenrolcoursefield}," .
+        $strcoursefields .
+        " ct.{$CFG->enrol_idb_remoteenrolcoursefield}, " .
+        " FROM {$CFG->enrol_idb_enroltable} et" .
+        " JOIN {$CFG->enrol_idb_coursetable} ct" .
+        " WHERE et.{$CFG->enrol_idb_remoteenrolcoursefield} = ec.{$CFG->enrol_idb_remotecoursefield} AND " .
+        " {$CFG->enrol_idb_remoteuserfield} IS NOT NULL" .
         (isset($remote_role_name, $remote_role_value) ? ' AND '.$remote_role_name.' = '.$remote_role_value : '');
 
     $rs = $enroldb->Execute($sql);
@@ -224,17 +295,17 @@ function sync_enrolments($role = null) {
     $extcourses = array();
     while ($extcourse_obj = rs_fetch_next_record($rs)) { // there are more course records
         $extcourse_obj = (object)array_change_key_case((array)$extcourse_obj , CASE_LOWER);
-        $extcourse = $extcourse_obj->{strtolower($CFG->enrol_remotecoursefield)};
+        $extcourse = $extcourse_obj->{strtolower($CFG->enrol_idb_remotecoursefield)};
         array_push($extcourses, $extcourse);
 
         // does the course exist in moodle already?
         $course = false;
         $course = get_record( 'course',
-                              $CFG->enrol_localcoursefield,
+                              $CFG->enrol_idb_localcoursefield,
                               addslashes($extcourse) );
 
         if (!is_object($course)) {
-            if (empty($CFG->enrol_db_autocreate)) { // autocreation not allowed
+            if (empty($CFG->enrol_idb_courseautocreate)) { // autocreation not allowed
                 if (debugging('', DEBUG_ALL)) {
                     error_log( "Course $extcourse does not exist, skipping");
                 }
@@ -243,7 +314,7 @@ function sync_enrolments($role = null) {
             // ok, now then let's create it!
             // prepare any course properties we actually have
             $course = new StdClass;
-            $course->{$CFG->enrol_localcoursefield} = $extcourse;
+            $course->{$CFG->enrol_idb_localcoursefield} = $extcourse;
             $course->fullname  = $extcourse;
             $course->shortname = $extcourse;
             if (!($newcourseid = $this->create_course($course, true)
@@ -265,9 +336,9 @@ function sync_enrolments($role = null) {
         // get a list of the student ids the are enrolled
         // in the external db -- hopefully it'll fit in memory...
         $extenrolments = array();
-        $sql = "SELECT {$CFG->enrol_remoteuserfield} " .
-            " FROM {$CFG->enrol_dbtable} " .
-            " WHERE {$CFG->enrol_remotecoursefield} = " . $enroldb->quote($extcourse) .
+        $sql = "SELECT {$CFG->enrol_idb_remoteuserfield} " .
+            " FROM {$CFG->enrol_idb_table} " .
+            " WHERE {$CFG->enrol_idb_remotecoursefield} = " . $enroldb->quote($extcourse) .
                 ($have_role ? ' AND '.$remote_role_name.' = '.$remote_role_value : '');
 
         $crs = $enroldb->Execute($sql);
@@ -282,7 +353,7 @@ function sync_enrolments($role = null) {
         // slurp results into an array
         while ($crs_obj = rs_fetch_next_record($crs)) {
             $crs_obj = (object)array_change_key_case((array)$crs_obj , CASE_LOWER);
-            array_push($extenrolments, $crs_obj->{strtolower($CFG->enrol_remoteuserfield)});
+            array_push($extenrolments, $crs_obj->{strtolower($CFG->enrol_idb_remoteuserfield)});
         }
         rs_close($crs); // release the handle
 
@@ -298,15 +369,15 @@ function sync_enrolments($role = null) {
         // When the user logs in though, their role list will be updated
         // correctly.
         //
-        if (!$CFG->enrol_db_disableunenrol) {
+        if (!$CFG->enrol_idb_disableunenrol) {
             $to_prune = get_records_sql("
              SELECT ra.*
              FROM {$CFG->prefix}role_assignments ra
               JOIN {$CFG->prefix}user u ON ra.userid = u.id
-             WHERE ra.enrol = 'database'
+             WHERE ra.enrol = 'idatabase'
               AND ra.contextid = {$context->id}
               AND ra.roleid = ". $role->id . ($extenrolments
-                ? " AND u.{$CFG->enrol_localuserfield} NOT IN (".join(", ", array_map(array(&$db, 'quote'), $extenrolments)).")"
+                ? " AND u.{$CFG->enrol_idb_localuserfield} NOT IN (".join(", ", array_map(array(&$db, 'quote'), $extenrolments)).")"
                 : ''));
 
             if ($to_prune) {
@@ -332,7 +403,7 @@ function sync_enrolments($role = null) {
                  LEFT OUTER JOIN {$CFG->prefix}role_assignments ra ON u.id = ra.userid
                   AND ra.roleid = {$role->id}
                   AND ra.contextid = {$context->id}
-                 WHERE u.{$CFG->enrol_localuserfield} = ".$db->quote($member) .
+                 WHERE u.{$CFG->enrol_idb_localuserfield} = ".$db->quote($member) .
                  " AND (u.deleted IS NULL OR u.deleted=0) ";
 
             $ers = $db->Execute($sql);
@@ -354,7 +425,7 @@ function sync_enrolments($role = null) {
                 continue;
             }
 
-            if (role_assign($role->id, $userid, 0, $context->id, 0, 0, 0, 'database')){
+            if (role_assign($role->id, $userid, 0, $context->id, 0, 0, 0, 'idatabase')){
                 error_log( "Assigned role {$role->shortname} to user {$userid} in course {$course->id} (" . format_string($course->shortname) . ")");
             } else {
                 error_log( "Failed to assign role {$role->shortname} to user {$userid} in course {$course->id} (" . format_string($course->shortname) . ")");
@@ -375,17 +446,17 @@ function sync_enrolments($role = null) {
     // When the user logs in though, their role list will be updated
     // correctly.
     //
-    if (!$CFG->enrol_db_disableunenrol) {
+    if (!$CFG->enrol_idb_disableunenrol) {
         $sql = "
             SELECT ra.roleid, ra.userid, ra.contextid
             FROM {$CFG->prefix}role_assignments ra
                 JOIN {$CFG->prefix}context cn ON cn.id = ra.contextid
                 JOIN {$CFG->prefix}course c ON c.id = cn.instanceid
-            WHERE ra.enrol = 'database'
+            WHERE ra.enrol = 'idatabase'
               AND cn.contextlevel = ".CONTEXT_COURSE." " .
                 ($have_role ? ' AND ra.roleid = '.$role->id : '') .
                 ($extcourses
-                    ? " AND c.{$CFG->enrol_localcoursefield} NOT IN (" . join(",", array_map(array(&$db, 'quote'), $extcourses)) . ")"
+                    ? " AND c.{$CFG->enrol_idb_localcoursefield} NOT IN (" . join(",", array_map(array(&$db, 'quote'), $extcourses)) . ")"
                     : '');
 
         $ers = $db->Execute($sql);
@@ -422,136 +493,125 @@ function sync_enrolments($role = null) {
 function get_access_icons($course) {
 }
 
+/**
+ * Builds the list of course items to get from external database.
+ * @global object $CFG
+ * @return array array of strings with the fieldnames of the table of courses.
+ */
+function get_course_fields() {
+    global $CFG;
 
-/// Overide the base config_form() function
+    //list of fields from course table
+    $fields = array();
+
+    //course id is always got
+    array_push($fields, $CFG->enrol_idb_remotecoursefield);
+
+    //get the fullname field
+    if (!empty($CFG->enrol_idb_remotecoursefullnamefield)) {
+        array_push($fields, $CFG->enrol_idb_remotecoursefullnamefield);
+    }
+
+    //get the shortname field
+    if (!empty($CFG->enrol_idb_remotecourseshortnamefield)) {
+        array_push($fields, $CFG->enrol_idb_remotecourseshortnamefield);
+    }
+
+
+    //if course has a category, get it. otherwise, we will get nothing more.
+    if (!empty($CFG->enrol_idb_remotecoursecategoryfield)) {
+        array_push($fields, $CFG->enrol_idb_remotecoursecategoryfield);
+
+        //we got category name. there exist a subcategory?
+        if (!empty($CFG->enrol_idb_remotecoursesubcategoryfield)) {
+            array_push($fields, $CFG->enrol_idb_remotecoursesubcategoryfield);
+        }
+    }
+
+    //list of fields to get from the external database
+    return $fields;
+}
+
+/**
+ * Gets all parameter settings.
+ * @return array array with the name of all the settings.
+ */
+function get_settings() {
+    return array('enrol_idb_type', 'enrol_idb_host', 'enrol_idb_name',
+        'enrol_idb_user', 'enrol_idb_pass', 'enrol_idb_coursetable',
+        'enrol_idb_localcoursefield', 'enrol_idb_remotecoursefield',
+        'enrol_idb_remotecoursecategoryfield', 'enrol_idb_remotecoursesubcategoryfield',
+        'enrol_idb_localcoursemissingcategory', 'enrol_idb_remotecoursefullnamefield',
+        'enrol_idb_remotecourseshortnamefield', 'enrol_idb_enroltable',
+        'enrol_idb_localuserfield', 'enrol_idb_remoteuserfield',
+        'enrol_idb_localrolefield', 'enrol_idb_remoterolefield',
+        'enrol_idb_localenrolcoursefield', 'enrol_idb_remoteenrolcoursefield',
+        'enrol_idb_defaultcourseroleid', 'enrol_idb_allowedroles',
+        'enrol_idb_courseautocreate', 'enrol_idb_categoryautocreate',
+        'enrol_idb_category', 'enrol_idb_template', 'enrol_idb_ignorehiddencourse',
+        'enrol_idb_disableunenrol', 'enrol_idb_disablelogincheck');
+}
+
+/**
+ * Loads all the settings of this enrolment plugin, setting an empty string
+ * to any non existing parameter from database. After that, shows the plugin form.
+ * @param object $frm Object with plugin settings from database.
+ */
 function config_form($frm) {
     global $CFG;
 
-    $vars = array('enrol_dbhost', 'enrol_dbuser', 'enrol_dbpass',
-                  'enrol_dbname', 'enrol_dbtable',
-                  'enrol_localcoursefield', 'enrol_localuserfield',
-                  'enrol_remotecoursefield', 'enrol_remoteuserfield',
-                  'enrol_db_autocreate', 'enrol_db_category', 'enrol_db_template',
-                  'enrol_db_localrolefield', 'enrol_db_remoterolefield',
-                  'enrol_remotecoursefield', 'enrol_remoteuserfield',
-                  'enrol_db_ignorehiddencourse', 'enrol_db_defaultcourseroleid',
-                  'enrol_db_disableunenrol');
+    $vars = $this->get_settings();
 
     foreach ($vars as $var) {
         if (!isset($frm->$var)) {
             $frm->$var = '';
         }
     }
-    include("$CFG->dirroot/enrol/database/config.html");
+    include("$CFG->dirroot/enrol/idatabase/config.html");
 }
 
 /// Override the base process_config() function
 function process_config($config) {
 
-    if (!isset($config->enrol_dbtype)) {
-        $config->enrol_dbtype = 'mysql';
+    if (!isset($config->enrol_idb_type)) {
+        $config->enrol_idb_type = 'mysql';
     }
-    set_config('enrol_dbtype', $config->enrol_dbtype);
+    set_config('enrol_idb_type', $config->enrol_idb_type);
 
-    if (!isset($config->enrol_dbhost)) {
-        $config->enrol_dbhost = '';
-    }
-    set_config('enrol_dbhost', $config->enrol_dbhost);
+    //getting all settings except enrol_idb_type
+    $vars = $this->get_settings();
+    $key = array_search('enrol_idb_type', $vars);
+    unset($vars[$key]);
 
-    if (!isset($config->enrol_dbuser)) {
-        $config->enrol_dbuser = '';
+    foreach ($vars as $setting) {
+        if (!isset($config->$setting)) {
+            $config->$setting = '';
+        }
+        set_config($setting, $config->$setting);
     }
-    set_config('enrol_dbuser', $config->enrol_dbuser);
-
-    if (!isset($config->enrol_dbpass)) {
-        $config->enrol_dbpass = '';
-    }
-    set_config('enrol_dbpass', $config->enrol_dbpass);
-
-    if (!isset($config->enrol_dbname)) {
-        $config->enrol_dbname = '';
-    }
-    set_config('enrol_dbname', $config->enrol_dbname);
-
-    if (!isset($config->enrol_dbtable)) {
-        $config->enrol_dbtable = '';
-    }
-    set_config('enrol_dbtable', $config->enrol_dbtable);
-
-    if (!isset($config->enrol_localcoursefield)) {
-        $config->enrol_localcoursefield = '';
-    }
-    set_config('enrol_localcoursefield', $config->enrol_localcoursefield);
-
-    if (!isset($config->enrol_localuserfield)) {
-        $config->enrol_localuserfield = '';
-    }
-    set_config('enrol_localuserfield', $config->enrol_localuserfield);
-
-    if (!isset($config->enrol_remotecoursefield)) {
-        $config->enrol_remotecoursefield = '';
-    }
-    set_config('enrol_remotecoursefield', $config->enrol_remotecoursefield);
-
-    if (!isset($config->enrol_remoteuserfield)) {
-        $config->enrol_remoteuserfield = '';
-    }
-    set_config('enrol_remoteuserfield', $config->enrol_remoteuserfield);
-
-    if (!isset($config->enrol_db_autocreate)) {
-        $config->enrol_db_autocreate = '';
-    }
-    set_config('enrol_db_autocreate', $config->enrol_db_autocreate);
-
-    if (!isset($config->enrol_db_category)) {
-        $config->enrol_db_category = '';
-    }
-    set_config('enrol_db_category', $config->enrol_db_category);
-
-    if (!isset($config->enrol_db_template)) {
-        $config->enrol_db_template = '';
-    }
-    set_config('enrol_db_template', $config->enrol_db_template);
-
-    if (!isset($config->enrol_db_defaultcourseroleid)) {
-        $config->enrol_db_defaultcourseroleid = '';
-    }
-    set_config('enrol_db_defaultcourseroleid', $config->enrol_db_defaultcourseroleid);
-
-    if (!isset($config->enrol_db_localrolefield)) {
-        $config->enrol_db_localrolefield = '';
-    }
-    set_config('enrol_db_localrolefield', $config->enrol_db_localrolefield);
-
-    if (!isset($config->enrol_db_remoterolefield)) {
-        $config->enrol_db_remoterolefield = '';
-    }
-    set_config('enrol_db_remoterolefield', $config->enrol_db_remoterolefield);
-
-    if (!isset($config->enrol_db_ignorehiddencourse)) {
-        $config->enrol_db_ignorehiddencourse = '';
-    }
-    set_config('enrol_db_ignorehiddencourse', $config->enrol_db_ignorehiddencourse );
-
-    if (!isset($config->enrol_db_disableunenrol)) {
-        $config->enrol_db_disableunenrol = '';
-    }
-    set_config('enrol_db_disableunenrol', $config->enrol_db_disableunenrol );
 
     return true;
 }
 
-// will create the moodle course from the template
-// course_ext is an array as obtained from ldap -- flattened somewhat
-// NOTE: if you pass true for $skip_fix_course_sortorder
-// you will want to call fix_course_sortorder() after your are done
-// with course creation
-function create_course ($course,$skip_fix_course_sortorder=0){
+/**
+ * This will create the moodle course from the template.
+ * NOTE: if you pass true for $skip_fix_course_sortorder
+ * you will want to call fix_course_sortorder() after your are done
+ * with course creation
+ *
+ * @global object $CFG
+ * @param object $course course to create
+ * @param object $extcourse course data from external database.
+ * @param boolean $skip_fix_course_sortorder if true, fix_course_sortorder() will be invoked.
+ * @return boolean|int false if the course could not be created. The id
+ * for the created course.
+ */
+function create_course ($course, $extcourse, $skip_fix_course_sortorder=0){
     global $CFG;
 
     // define a template
-    if(!empty($CFG->enrol_db_template)){
-        $template = get_record("course", 'shortname', $CFG->enrol_db_template);
+    if(!empty($CFG->enrol_idb_template)){
+        $template = get_record("course", 'shortname', $CFG->enrol_idb_template);
         $template = (array)$template;
     } else {
         $site = get_site();
@@ -581,9 +641,11 @@ function create_course ($course,$skip_fix_course_sortorder=0){
         }
     }
 
-    $course->category = 1;     // the misc 'catch-all' category
-    if (!empty($CFG->enrol_db_category)){ //category = 0 or undef will break moodle
-        $course->category = $CFG->enrol_db_category;
+    $course->category = $this->get_category($extcourse);
+    if ($course->category == false) {
+        trigger_error("Could not create the category for the new course $extcourse from database");
+        notify("Serious Error! Could not create the category for the new course!");
+        return false;
     }
 
     // define the sortorder
@@ -603,6 +665,7 @@ function create_course ($course,$skip_fix_course_sortorder=0){
     // truncate a few key fields
     $course->idnumber  = substr($course->idnumber, 0, 100);
     $course->shortname = substr($course->shortname, 0, 100);
+    $course->fullname  = substr($course->fullname, 0, 254);
 
     // store it and log
     if ($newcourseid = insert_record("course", addslashes_object($course))) {  // Set up new course
@@ -617,7 +680,7 @@ function create_course ($course,$skip_fix_course_sortorder=0){
         if(!$skip_fix_course_sortorder){
             fix_course_sortorder();
         }
-        add_to_log($newcourseid, "course", "new", "view.php?id=$newcourseid", "enrol/database auto-creation");
+        add_to_log($newcourseid, "course", "new", "view.php?id=$newcourseid", "enrol/idatabase auto-creation");
     } else {
         trigger_error("Could not create new course $extcourse from  from database");
         notify("Serious Error! Could not create the new course!");
@@ -625,6 +688,103 @@ function create_course ($course,$skip_fix_course_sortorder=0){
     }
 
     return $newcourseid;
+}
+
+/**
+ * Returns the course category id or false if it does not exists and cannot be
+ * created or it is not allowed to.
+ * @global object $CFG global configuration.
+ * @param object $extcourse record from external database with the course data.
+ * @return mixed the course category id or false when the course category cannot
+ * be found.
+ */
+function get_category($extcourse) {
+    global $CFG;
+
+    $category = 1;     // the misc 'catch-all' category
+    if (!empty($CFG->enrol_idb_category)){ //category = 0 or undef will break moodle
+        $category = $CFG->enrol_idb_category;
+    }
+
+    //check the category specified in the course details from external database
+    $category = $this->build_category($extcourse, $category, 'remotecoursecategoryfield');
+    if (!category) {
+        return false;
+    }
+
+    //check the subcategory specified in the course details from external database
+    $category = $this->build_category($extcourse, $category, 'remotecoursesubcategoryfield');
+
+    return $category;
+}
+
+/**
+ * Having the course details from the external database, check if we have
+ * to create a category under the parent category with id $category.
+ * We check the field with name $fieldname. If in the plugin settings has been
+ * setup a category field from the external database, and the field value is empty,
+ * the course will be created in the parent category $category.
+ * @global object $CFG
+ * @param object $extcourse course data from the external database.
+ * @param int $category parent category id
+ * @param string $fieldname fieldname of the course data
+ * @return boolean|int return false if the category could not be created.
+ * The category id otherwise.
+ */
+function build_category($extcourse, $category, $fieldname) {
+    global $CFG;
+
+    $cfgfield = 'enrol_idb_'.$fieldname;
+
+    if (!empty($CFG->$cfgfield) && !empty($extcourse->$fieldname)) {
+        $extcat = get_field_sql('SELECT id ' .
+                          ' FROM ' . $CFG->prefix . 'course_categories ' .
+                          ' WHERE name = \'' . $extcourse->$fieldname . '\'');
+        if ($extcat == false) {
+            if (!empty($CFG->enrol_idb_categoryautocreate)) {
+                //the category does not exist and we are allowed to create it
+                $newcat = $this->create_category($extcourse->$fieldname, $category);
+                if (!$newcat) {
+                    //the category could not be created.
+                    return false;
+                }
+                return $extcat->id;
+            } else {
+                //the category does not exists and it is not allowed to create it.
+                return false;
+            }
+        } else {
+            //the category exists
+            return $extcat;
+        }
+    }
+    return $category;
+}
+
+/**
+ * Creates a course category.
+ * @param string $name name of the category
+ * @param int $parent id from the parent course category.
+ * @return boolean|object false if the category could not be created.
+ * The category instance otherwise.
+ */
+function create_category($name, $parent) {
+    //code inspired from course/editcategory.php
+    $cat = new stdClass();
+    $cat->name = $name;
+    $cat->parent = $parent;
+    $cat->description = NULL;
+    $cat->theme = NULL;
+    $cat->sortorder = 999;
+    if (!$cat->id = insert_record('course_categories', addslashes_object($cat))) {
+        error_log("Could not insert the new category '{$cat->name}' ");
+        return false;
+    }
+    $cat->context = get_context_instance(CONTEXT_COURSECAT, $cat->id);
+    mark_context_dirty($cat->context->path);
+    fix_course_sortorder(); // Required to build course_categories.depth and .path.
+    add_to_log($cat->id, "course", "new", "category.php?id={$cat->id}", "enrol/idatabase category auto-creation");
+    return $cat;
 }
 
 /// DB Connect
@@ -635,13 +795,13 @@ function enrol_connect() {
     global $CFG;
 
     // Try to connect to the external database (forcing new connection)
-    $enroldb = &ADONewConnection($CFG->enrol_dbtype);
-    if ($enroldb->Connect($CFG->enrol_dbhost, $CFG->enrol_dbuser, $CFG->enrol_dbpass, $CFG->enrol_dbname, true)) {
+    $enroldb = &ADONewConnection($CFG->enrol_idb_type);
+    if ($enroldb->Connect($CFG->enrol_idb_host, $CFG->enrol_idb_user, $CFG->enrol_idb_pass, $CFG->enrol_idb_name, true)) {
         $enroldb->SetFetchMode(ADODB_FETCH_ASSOC); ///Set Assoc mode always after DB connection
         return $enroldb;
     } else {
         trigger_error("Error connecting to enrolment DB backend with: "
-                      . "$CFG->enrol_dbhost,$CFG->enrol_dbuser,$CFG->enrol_dbpass,$CFG->enrol_dbname");
+                      . "$CFG->enrol_idb_host,$CFG->enrol_idb_user,$CFG->enrol_idb_pass,$CFG->enrol_idb_name");
         return false;
     }
 }
@@ -665,11 +825,11 @@ function role_fields($enroldb, $role) {
     global $CFG;
 
     if ($have_role = !empty($role)
-     && !empty($CFG->enrol_db_remoterolefield)
-     && !empty($CFG->enrol_db_localrolefield)
-     && !empty($role->{$CFG->enrol_db_localrolefield})) {
-        $remote_role_name = $CFG->enrol_db_remoterolefield;
-        $remote_role_value = $enroldb->quote($role->{$CFG->enrol_db_localrolefield});
+     && !empty($CFG->enrol_idb_remoterolefield)
+     && !empty($CFG->enrol_idb_localrolefield)
+     && !empty($role->{$CFG->enrol_idb_localrolefield})) {
+        $remote_role_name = $CFG->enrol_idb_remoterolefield;
+        $remote_role_value = $enroldb->quote($role->{$CFG->enrol_idb_localrolefield});
     } else {
         $remote_role_name = $remote_role_value = null;
     }
@@ -678,5 +838,3 @@ function role_fields($enroldb, $role) {
 }
 
 } // end of class
-
-?>

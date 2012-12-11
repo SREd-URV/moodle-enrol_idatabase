@@ -1,0 +1,71 @@
+<?php
+
+$string['enrolname'] = 'Improved External Database Enrolment Plugin';
+$string['description'] = 'You can use an external database (of nearly any kind) to control your course creation and enrolments. It is assumed your external database contains two tables, one with course information and another one with the list of the enrolments. Any course informed in the external database can be created automatically. Any enrolment informed in the external database will be performed if both user and course exist. All they have some course ID, user ID and role ID to link users to courses with some role. All these fields are compared to some local database fields. There are other advanced configuration settings.';
+
+//strings like enrol_* appear in the left-side of the form.
+//strings like enrol_*_desc appear in the right-side of the form, as the description.
+//strings like enrol_*_ex are specific examples.
+$string['course_field_mapping'] = 'Mapping for course-related fields';
+$string['enrol_coursecategoryfield'] = 'Category field';
+$string['enrol_coursecategoryfield_desc'] = 'Optional: This field allows you to specify the courses\' category. If present, the course will be created under the category tree <code>auto-creation category/category field value</code>.';
+$string['enrol_coursefield'] = 'Course id field';
+$string['enrol_coursefield_desc'] = 'Course id field name. The use of the <code>idnumber</code> is highly recommended.';
+$string['enrol_coursefield_ex'] = 'From {$a}course. Example: idnumber';
+$string['enrol_coursefullnamefield'] = 'Fullname field';
+$string['enrol_coursefullnamefield_desc'] = 'Optional: Course\'s fullname field name. If this is empty, the external course id is used instead.';
+$string['enrol_coursefullnamefield_ex'] = '{$a}course.fullname';
+$string['enrol_coursemissingcategory'] = 'Category name for missing courses';
+$string['enrol_coursemissingcategory_desc'] = 'This category name allows you to specify the courses\' subcategory for missing courses in external database. The missing courses will be moved to this category tree <code>auto-creation category/category field value/category for missing courses</code> if the <code>category field name</code> is specified, or <code>auto-creation category/category for missing courses</code>.';
+$string['enrol_courseshortnamefield'] = 'Shortname field';
+$string['enrol_courseshortnamefield_desc'] = 'Optional: Course\'s shortname field name. It this is empty, the fullname field data will be used instead.';
+$string['enrol_courseshortnamefield_ex'] = '{$a}course.shortname';
+$string['enrol_coursesubcategoryfield'] = 'Subcategory field';
+$string['enrol_coursesubcategoryfield_desc'] = 'Optional: This field allows you to specify the courses\' subcategory. If present, the course will be created under the category tree <code>auto-creation category/category field value/subcategory field value</code>.';
+$string['enrol_database_autocreation_settings'] = 'Auto-creation details';
+$string['enrol_dballowedroles'] = 'Allowed assignable roles';
+$string['enrol_dballowedroles_desc'] = 'For security reasons, you can restrict the set of assignable roles that appears in the external database. For instance, if you choose only the <code>student</code> role, only enrolments with this role will be performed, so that all the enrolments with role except <code>student</code> will be omitted.';
+$string['enrol_dbdefaultcourseroleid'] = 'Default role';
+$string['enrol_dbdefaultcourseroleid_desc'] = 'The role that will be assigned by default if no other role is specified.';
+$string['enrol_enrolcoursefield'] = 'Course id field';
+$string['enrol_enrolcoursefield_desc'] = 'Course id field from the enrolments table. The value of this field must coincide with the course id specified in the course external table.';
+$string['enrol_enrolcoursefield_ex'] = 'From {$a}course. Example: idnumber';
+$string['enrol_field_mapping'] = 'Mapping for enrolment-related fields';
+$string['enrol_idb_category'] = 'Category';
+$string['enrol_idb_category_desc'] = 'The category where to place the auto-created courses.';
+$string['enrol_idb_categoryautocreate'] = 'Category autocreation';
+$string['enrol_idb_categoryautocreate_desc'] = 'Categories and subcategories (if present), as well as the category for missing courses, can be created automatically if there are courses in that categories and subcategories that do not yet exist in Moodle. If you choose do not create automatically the categories, you MUST ensure the expected categories and subcategories from external database to be created manually before beginning with database enrolments. Otherwise, courses will not be created.';
+$string['enrol_idb_courseautocreate'] = 'Course autocreation';
+$string['enrol_idb_courseautocreate_desc'] = 'Courses can be created automatically if there are courses that do not yet exist in Moodle.';
+$string['enrol_idb_coursetable'] = 'Course table';
+$string['enrol_idb_coursetable_desc'] = 'External database table with the details of the courses.';
+$string['enrol_idb_disablelogincheck'] = 'Disable login setup';
+$string['enrol_idb_disablelogincheck_desc'] = 'If you select yes, only the cron task will create courses (if necessary) and enrol users. This is quite necessary for slow external database connections.';
+$string['enrol_idb_disableunenrol'] = 'Unenrol';
+$string['enrol_idb_disableunenrol_desc'] = 'If set to yes users previously enrolled by the external database plugin will not be unenrolled by the same plugin regardless of the database contents.';
+$string['enrol_idb_enroltable'] = 'Enrolment table';
+$string['enrol_idb_enroltable_desc'] = 'External database table with all the enrolments.';
+$string['enrol_idb_host'] = 'Server address';
+$string['enrol_idb_host_desc'] = 'Server IP or name address.';
+$string['enrol_idb_ignorehiddencourse'] = 'Ignore enrolment on hidden courses';
+$string['enrol_idb_ignorehiddencourse_desc'] = 'If set to yes users will not be enroled on courses that are set to be unavailable to students.';
+$string['enrol_idb_name'] = 'Database name';
+$string['enrol_idb_name_desc'] = 'External database name.';
+$string['enrol_idb_pass'] = 'Password';
+$string['enrol_idb_pass_desc'] = 'External database password for the given username.';
+$string['enrol_idb_template'] = 'Course template';
+$string['enrol_idb_template_desc'] = 'Optional: auto-created courses can copy their settings from a template course. Type here the <code>{$a}course.shortname</code> of the template course.';
+$string['enrol_idb_type'] = 'Database type';
+$string['enrol_idb_type_desc'] = 'External database type.';
+$string['enrol_idb_user'] = 'Username';
+$string['enrol_idb_user_desc'] = 'External database username with access.';
+$string['enrol_rolefield'] = 'Role id field';
+$string['enrol_rolefield_desc'] = 'Role id field name.';
+$string['enrol_rolefield_ex'] = 'From {$a}role. Example: shortname';
+$string['enrol_userfield'] = 'User id field';
+$string['enrol_userfield_desc'] = 'User id field name.';
+$string['enrol_userfield_ex'] = 'From {$a}user. Example: idnumber';
+$string['general_options'] = 'General Options';
+$string['local'] = 'From local database';
+$string['remote'] = 'From remote table';
+$string['server_settings'] = 'External Database Server Settings';
