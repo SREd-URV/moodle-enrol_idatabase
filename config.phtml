@@ -355,7 +355,7 @@
                         $selectedroles = explode(',',$frm->enrol_idb_allowedroles);
                     }
 
-                    choose_from_menu ($assignableroles, 'enrol_idb_allowedroles', $selectedroles, '', '',
+                    choose_from_menu ($assignableroles, 'enrol_idb_allowedroles[]', $selectedroles, '', '',
                            '0', false, false, 0, '', true, true, '');
 
                     if (isset($err['enrol_idb_allowedroles'])) formerr($err['enrol_idb_allowedroles']);

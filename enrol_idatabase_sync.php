@@ -4,7 +4,8 @@
         error_log("should not be called from apache!");
         exit;
     }
-    error_reporting(E_ALL);
+    ini_set('error_reporting', E_ALL);
+    ini_set('display_errors', true);
 
     require_once(dirname(dirname(dirname(__FILE__))).'/config.php'); // global moodle config file.
 
@@ -19,17 +20,9 @@
          error_log("idatabase enrol plugin not enabled!");
          die;
     }
+    echo "=== enrol/idatabase sync started ===\n";
 
     // update enrolments -- these handlers should autocreate courses if required
     $enrol = new enrolment_plugin_idatabase();
 
-    $roles = $enrol->get_available_roles();
-
-    foreach ($roles as $role) {
-        $enrol->sync_enrolments($role);
-    }
-
-    // sync metacourses
-    if (function_exists('sync_metacourses')) {
-        sync_metacourses();
-    }
+    $enrol->sync_all_enrolments();
